@@ -60,6 +60,7 @@ class FixedDosePolicy(StaticPolicy):
                   to all patients.
         """
         ### START CODE HERE ###
+        return 1
         ### END CODE HERE ###
 
 
@@ -89,6 +90,30 @@ class ClinicalDosingPolicy(StaticPolicy):
         age_in_decades = x["Age in decades"]
 
         ### START CODE HERE ###
+        # print("{}\n".format(x))
+        height_in_cm = x["Height (cm)"]
+        weight_in_kg = x["Weight (kg)"]
+        asian_race = x["Asian"]
+        black_or_african_american = x["Black"]
+        missing_or_mixed_race = x["Unknown race"]
+        enzyme_inducer_status = (
+            x["Carbamazepine (Tegretol)"]
+            or x["Phenytoin (Dilantin)"]
+            or x["Rifampin or Rifampicin"]
+        )
+        amiodarone_status = x["Amiodarone (Cordarone)"]
+
+        weekly_dose_sqrt = (
+            4.0376
+            - 0.2546 * age_in_decades
+            + 0.0118 * height_in_cm
+            + 0.0134 * weight_in_kg
+            - 0.6752 * asian_race
+            + 0.4060 * black_or_african_american
+            + 0.0443 * missing_or_mixed_race
+            + 1.2799 * enzyme_inducer_status
+            - 0.5695 * amiodarone_status
+        )
         ### END CODE HERE ###
 
         return weekly_dose_sqrt
@@ -110,6 +135,8 @@ class ClinicalDosingPolicy(StaticPolicy):
 
         weekly_dose_sqrt = self.extract_features(x)
         ### START CODE HERE ###
+        weekly_dose = weekly_dose_sqrt ** 2
+        return dose_class(weekly_dose)
         ### END CODE HERE ###
 
 
