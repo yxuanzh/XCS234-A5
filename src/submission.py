@@ -169,6 +169,12 @@ class LinUCB(BanditPolicy):
                 Keep track of a seperate A, b for each action (this is what the Disjoint in the algorithm name means)
         """
         ### START CODE HERE ###
+        self.features = features
+        self.num_arms = num_arms
+        self.d = len(features)
+        self.alpha = alpha
+        self.A = np.array([np.identity(self.d) for _ in range(num_arms)])
+        self.b = np.array([np.zeros(self.d) for _ in range(num_arms)])
         ### END CODE HERE ###
 
     def extract_features(self, x):
@@ -205,6 +211,10 @@ class LinUCB(BanditPolicy):
 
         #########   ~5 lines.   #############
         ### START CODE HERE ###
+        A_inv = np.linalg.inv(self.A)
+        theta = np.einsum("ijk,ik->ij", A_inv, self.b)
+        P_t = np.einsum("ij,j->i", theta, xvec) + self.alpha * np.sqrt(np.einsum("j,ijk,k->i", xvec, A_inv, xvec))
+        return np.argmax(P_t)
         ### END CODE HERE ###
         #######################################################
 
@@ -228,6 +238,8 @@ class LinUCB(BanditPolicy):
             xvec = self.extract_features(x)
 
         ### START CODE HERE ###
+        self.A[a,:,:] += np.einsum("i,j->ij", xvec, xvec)
+        self.b[a,:] += r * xvec
         ### END CODE HERE ###
 
 
@@ -259,6 +271,13 @@ class eGreedyLinB(LinUCB):
         xvec = self.extract_features(x)
 
         ### START CODE HERE ###
+        random = np.random.rand()
+        if random < epsilon:
+            return np.random.randint(self.num_arms)
+        A_inv = np.linalg.inv(self.A)
+        theta = np.einsum("ijk,ik->ij", A_inv, self.b)
+        P_t = np.einsum("ij,j->i", theta, xvec)
+        return np.argmax(P_t)
         ### END CODE HERE ###
 
 
@@ -300,6 +319,13 @@ class ThomSampB(BanditPolicy):
 
         """
         ### START CODE HERE ###
+        self.features = features
+        self.num_arms = num_arms
+        self.d = len(features)
+        self.v2 = alpha
+        self.B = np.array([np.identity(self.d) for _ in range(self.num_arms)])
+        self.mu = np.array([np.zeros(self.d) for _ in range(self.num_arms)])
+        self.f = np.array([np.zeros(self.d) for _ in range(self.num_arms)])
         ### END CODE HERE ###
 
     def extract_features(self, x):
@@ -331,6 +357,12 @@ class ThomSampB(BanditPolicy):
         xvec = self.extract_features(x)
 
         ### START CODE HERE ###
+        mu_tilde = []
+        for i in range(self.num_arms):
+            mu_tilde.append(np.random.multivariate_normal(self.mu[i,:], self.v2 * np.linalg.inv(self.B[i,:,:])))
+        mu_tilde = np.array(mu_tilde)
+        P = np.einsum("j,ij->i", xvec, mu_tilde)
+        return np.argmax(P)
         ### END CODE HERE ###
 
     def update(self, x, a, r):
@@ -353,6 +385,9 @@ class ThomSampB(BanditPolicy):
         xvec = self.extract_features(x)
 
         ### START CODE HERE ###
+        self.B[a,:,:] += np.einsum("i,j->ij", xvec, xvec)
+        self.f[a,:] += xvec.T * r
+        self.mu[a,:] = np.linalg.inv(self.B[a,:,:]) @ self.f[a,:]
         ### END CODE HERE ###
 
 
