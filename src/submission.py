@@ -410,6 +410,9 @@ class DynamicLinUCB(LinUCB):
         #######################################################
         #########  ~2 lines.   #############
         ### START CODE HERE ###
+        self.num_arms += 1
+        self.A = np.concatenate((self.A, np.identity(self.d).reshape(1, self.d, self.d)))
+        self.b = np.concatenate((self.b, np.zeros(self.d).reshape(1, self.d)))
         ### END CODE HERE ###
 
 
@@ -523,6 +526,13 @@ class Simulator:
             #######################################################
             #########  ~8 lines.   #############
             ### START CODE HERE ###
+            chosen_arm_freq = Counter(chosen_arm_id for _, chosen_arm_id, _ in self.logs[-self.update_freq:])
+            if len(chosen_arm_freq) < 2:
+                return False
+            sorted_arms = list(range(self.num_arms))
+            sorted_arms.sort(key = lambda idx: -chosen_arm_freq[idx])
+            self.arms[self.num_arms] = (self.arms[sorted_arms[0]] + self.arms[sorted_arms[1]]) / 2
+            self.num_arms += 1
             ### END CODE HERE ###
             #######################################################
         if self.update_arms_strategy == "corrective":
@@ -539,6 +549,14 @@ class Simulator:
             #######################################################
             #########  ~7 lines.   #############
             ### START CODE HERE ###
+            weighted_sum = np.zeros(self.num_features)
+            total = 0
+            for _, chosen_arm_id, best_arm_id in self.logs[-self.update_freq:]:
+                if chosen_arm_id == best_arm_id:
+                    weighted_sum += self.arms[best_arm_id]
+                    total += 1
+            self.arms[self.num_arms] =  weighted_sum / total
+            self.num_arms += 1
             ### END CODE HERE ###
             #######################################################
         if self.update_arms_strategy == "counterfactual":
@@ -556,6 +574,17 @@ class Simulator:
             #######################################################
             #########  ~9 lines.   #############
             ### START CODE HERE ###
+            theta_a = np.zeros(self.num_features)
+            new_theta_a = None
+            eta = 0.1
+            grad = np.zeros(self.num_features)
+            for user_id, chosen_arm_id, _ in self.logs[-self.update_freq:]:
+                x_i= self.users[user_id]
+                grad += (np.einsum("i,i", theta_a, x_i) - np.einsum("i,i", self.arms[chosen_arm_id], x_i)) * x_i
+            new_theta_a = theta_a + eta * grad
+            self.arms[self.num_arms] =  new_theta_a
+            theta_a = new_theta_a
+            self.num_arms += 1
             ### END CODE HERE ###
             #######################################################
 
